@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Last Fortress Gatcha</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 500px;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        .button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #d9534f;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>가챠 뽑기 시스템</h1>
+    <button class="button" onclick="selectSystem('faction')">진영뽑기</button>
+    <button class="button" onclick="selectSystem('blueChip')">블루칩 뽑기</button>
+
+    <div id="inputSection" style="display: none;">
+        <!-- Faction Draw input -->
+        <div id="factionInput" style="display: none;">
+            <input type="number" id="factionDrawCount" placeholder="진영뽑기 횟수 입력" min="1">
+        </div>
+        <!-- Blue Chip input -->
+        <div id="blueChipInput" style="display: none;">
+            <input type="number" id="chipCount" placeholder="블루칩 개수 입력" min="900">
+        </div>
+        <button class="button" onclick="runDraw()">뽑기 실행</button>
+    </div>
+
+    <div id="resultSection" class="result"></div>
+</div>
+
+<script>
+    const factionCharacters = ["갈랜드", "롤랜드", "로리에", "켈리", "나츠미", "첸첸", "박지미", "런은", "패트릭", "윈스턴", "듀크", "렌"];
+    const factionProbabilities = [1.0, 0.5, 0.5, 1.0, 1.3, 1.3, 6.0, 6.0, 11.0, 11.0, 11.0, 49.4];
+    
+    const blueChipCharacters = [ "갈랜드", "로저스", "볼튼", "벤슨", "엔리케", "블랑쉬", "하먼", "마를렌", "롤랜드", "로리에", 
+    "퀸", "용", "레베카", "엘리사", "후지와라", "고하야카와", "맥스", "배런", "제시", "킨", "캘리", 
+    "나츠미", "첸첸", "콜먼", "도리스", "케이트", "베티", "이야마", "던컨", "박지미", "런은", 
+    "나탈리", "브롬", "신디", "매튜", "이반", "클라우드", "딘", "패드릭", "윈스턴", "듀크", 
+    "아켄달프", "렌", "앤드류", "리"];
+    const blueChipProbabilities = [ 0.0727, 0.0727, 0.0727, 0.0727, 0.0727, 0.0727, 0.0727, 0.0727, 0.0727, 0.0727, 0.0727, 
+    0.0727, 0.0727, 0.48, 0.48, 0.48, 0.24, 0.48, 0.48, 0.48, 0.24, 0.48, 0.48, 1.5, 1.5, 
+    1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 12.35, 
+    12.35, 12.35, 12.35];
+
+    const highlightProbabilities = new Set([1.0, 0.5, 1.3, 0.0727]);
+
+    let selectedSystem = null;
+
+    function selectSystem(system) {
+        selectedSystem = system;
+        document.getElementById('inputSection').style.display = 'block';
+        document.getElementById('resultSection').innerHTML = '';
+
+        // Toggle visibility of input fields based on selected system
+        if (system === 'faction') {
+            document.getElementById('factionInput').style.display = 'block';
+            document.getElementById('blueChipInput').style.display = 'none';
+        } else if (system === 'blueChip') {
+            document.getElementById('blueChipInput').style.display = 'block';
+            document.getElementById('factionInput').style.display = 'none';
+        }
+    }
+
+    function runDraw() {
+        let draws = 0;
+        if (selectedSystem === 'faction') {
+            const factionDrawCount = parseInt(document.getElementById('factionDrawCount').value);
+            if (isNaN(factionDrawCount) || factionDrawCount < 1) {
+                alert("1회 이상의 진영뽑기 횟수를 입력하세요.");
+                return;
+            }
+            draws = factionDrawCount;
+        } else if (selectedSystem === 'blueChip') {
+            const chipCount = parseInt(document.getElementById('chipCount').value);
+            if (isNaN(chipCount) || chipCount < 900) {
+                alert("900개 이상의 블루칩 개수를 입력하세요.");
+                return;
+            }
+            draws = Math.floor(chipCount / 900) * 10;
+            if (draws === 0) {
+                alert("900개 미만의 블루칩으로는 뽑을 수 없습니다.");
+                return;
+            }
+        }
+
+        let results = [];
+        if (selectedSystem === 'faction') {
+            results = drawCharacters(factionCharacters, factionProbabilities, draws);
+        } else if (selectedSystem === 'blueChip') {
+            results = drawCharacters(blueChipCharacters, blueChipProbabilities, draws);
+        }
+
+        displayResults(results);
+    }
+
+    function drawCharacters(characters, probabilities, numDraws) {
+        const totalWeight = probabilities.reduce((a, b) => a + b, 0);
+        const draws = [];
+
+        for (let i = 0; i < numDraws; i++) {
+            let randomChoice = Math.random() * totalWeight;
+            let cumulativeWeight = 0;
+
+            for (let j = 0; j < characters.length; j++) {
+                cumulativeWeight += probabilities[j];
+                if (randomChoice <= cumulativeWeight) {
+                    draws.push(characters[j]);
+                    break;
+                }
+            }
+        }
+        return draws;
+    }
+
+    function displayResults(draws) {
+        const counts = draws.reduce((acc, character) => {
+            acc[character] = (acc[character] || 0) + 1;
+            return acc;
+        }, {});
+
+        let highlightedCharacters = [];
+        let normalCharacters = [];
+
+        for (const [character, count] of Object.entries(counts)) {
+            const probability = selectedSystem === 'faction' ? factionProbabilities[factionCharacters.indexOf(character)] : blueChipProbabilities[blueChipCharacters.indexOf(character)];
+            const percentage = ((count / draws.length) * 100).toFixed(2);
+            const characterHTML = `<li class="${highlightProbabilities.has(probability) ? 'highlight' : ''}">${character}: ${count}회 (${percentage}%)</li>`;
+
+            if (highlightProbabilities.has(probability)) {
+                highlightedCharacters.push(characterHTML);
+            } else {
+                normalCharacters.push(characterHTML);
+            }
+        }
+
+        let resultHTML = "<h2>뽑기 결과</h2><ul>";
+        resultHTML += highlightedCharacters.join('') + normalCharacters.join('');
+        resultHTML += "</ul>";
+
+        document.getElementById('resultSection').innerHTML = resultHTML;
+    }
+</script>
+
+</body>
+</html>
